@@ -55,7 +55,7 @@ jobs:
         git checkout 1.0.0
         cd ..
         cmake -B zmusic_build  -DCMAKE_INSTALL_PREFIX=`pwd`/zmusic_install ZMusic
-        cmake --build zmusic_build --target INSTALL --parallel 3
+        cmake --build zmusic_build --target install --parallel 3
         if [[ ! -z "${{ matrix.config.deps_cmdline }}" ]]; then
           eval ${{ matrix.config.deps_cmdline }}
         fi

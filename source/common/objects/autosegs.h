@@ -45,69 +45,63 @@
 #define NO_SANITIZE
 #endif
 
-#define REGMARKER(x) (x)
-typedef void * const REGINFO;
-typedef void * NCREGINFO;
-
-// List of Action functons
-extern REGINFO ARegHead;
-extern REGINFO ARegTail;
-
-// List of TypeInfos
-extern REGINFO CRegHead;
-extern REGINFO CRegTail;
-
-// List of class fields
-extern REGINFO FRegHead;
-extern REGINFO FRegTail;
-
-// List of properties
-extern REGINFO GRegHead;
-extern REGINFO GRegTail;
-
-// List of MAPINFO map options
-extern REGINFO YRegHead;
-extern REGINFO YRegTail;
-
-class FAutoSegIterator
+class FAutoSeg
 {
-	public:
-		FAutoSegIterator(REGINFO &head, REGINFO &tail)
-		{
-			// Weirdness. Mingw's linker puts these together backwards.
-			if (&head <= &tail)
-			{
-				Head = &head;
-				Tail = &tail;
-			}
-			else
-			{
-				Head = &tail;
-				Tail = &head;
-			}
-			Probe = Head;
-		}
-		NCREGINFO operator*() const NO_SANITIZE
-		{
-			return *Probe;
-		}
-		FAutoSegIterator &operator++() NO_SANITIZE
-		{
-			do
-			{
-				++Probe;
-			} while (*Probe == 0 && Probe < Tail);
-			return *this;
-		}
-		void Reset()
-		{
-			Probe = Head;
-		}
+	const char *name;
+	void **begin;
+	void **end;
 
-	protected:
-		REGINFO *Probe;
-		REGINFO *Head;
-		REGINFO *Tail;
+	template <typename T>
+	struct ArgumentType;
+
+	template<class C, class T>
+	struct ArgumentType<void(C::*)(T) const>
+	{
+		using Type = T;
+	};
+
+	void Initialize();
+
+public:
+	explicit FAutoSeg(const char *name);
+
+	template <typename Func>
+	void ForEach(Func func)
+	{
+		using CallableType = decltype(&Func::operator());
+		using ArgType = typename ArgumentType<CallableType>::Type;
+
+		for (void **it = begin; it < end; ++it)
+		{
+			if (*it)
+			{
+				func(reinterpret_cast<ArgType>(*it));
+			}
+		}
+	}
 };
+
+namespace AutoSegs
+{
+	extern FAutoSeg ActionFunctons;
+	extern FAutoSeg TypeInfos;
+	extern FAutoSeg ClassFields;
+	extern FAutoSeg Properties;
+	extern FAutoSeg MapInfoOptions;
+}
+
+#ifdef __MACH__
+#define SECTION_AREG "__DATA,.areg"
+#define SECTION_CREG "__DATA,.creg"
+#define SECTION_FREG "__DATA,.freg"
+#define SECTION_GREG "__DATA,.greg"
+#define SECTION_YREG "__DATA,.yreg"
+#else
+#define SECTION_AREG ".areg"
+#define SECTION_CREG ".creg"
+#define SECTION_FREG ".freg"
+#define SECTION_GREG ".greg"
+#define SECTION_YREG ".yreg"
+#endif
 
 #endif

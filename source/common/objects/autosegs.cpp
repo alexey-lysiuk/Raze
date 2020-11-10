@@ -44,31 +44,74 @@
 
 #include "autosegs.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <dbghelp.h>
+#elif defined __MACH__
+#include <mach-o/getsect.h>
+#endif
+
+
+namespace AutoSegs
+{
+	FAutoSeg ActionFunctons{ SECTION_AREG };
+	FAutoSeg TypeInfos{ SECTION_CREG };
+	FAutoSeg ClassFields{ SECTION_FREG };
+	FAutoSeg Properties{ SECTION_GREG };
+	FAutoSeg MapInfoOptions{ SECTION_YREG };
+}
+
+
+FAutoSeg::FAutoSeg(const char *const name)
+: name(name)
+, begin(nullptr)
+, end(nullptr)
+{
+	assert(name != nullptr);
+
+	Initialize();
+}
+
+void FAutoSeg::Initialize()
+{
+#ifdef _WIN32
+
+	const HMODULE selfModule = GetModuleHandle(nullptr);
+	const SIZE_T baseAddress = reinterpret_cast<SIZE_T>(selfModule);
+
+	const PIMAGE_NT_HEADERS header = ImageNtHeader(selfModule);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(header);
+
+	for (WORD i = 0; i < header->FileHeader.NumberOfSections; ++i, ++section)
+	{
+		if (strncmp(reinterpret_cast<char *>(section->Name), name, IMAGE_SIZEOF_SHORT_NAME) == 0)
+		{
+			begin = reinterpret_cast<void **>(baseAddress + section->VirtualAddress);
+			end = reinterpret_cast<void **>(baseAddress + section->VirtualAddress + section->SizeOfRawData);
+			break;
+		}
+	}
+
+#elif defined __MACH__
+
+	TArray<FString> sectionName = FString(name).Split(',');
+	assert(sectionName.Size() == 2);
+	
+	if (const struct section_64 *const section = getsectbyname(sectionName[0], sectionName[1]))
+	{
+		begin = reinterpret_cast<void **>(section->addr);
+		end = reinterpret_cast<void **>(section->addr + section->size);
+	}
+
+#else // Linux and others with ELF executables
+
+	// TODO
+
+#endif
+}
+
+
 #if defined(_MSC_VER)
-
-// The various reg sections are used to group pointers spread across multiple
-// source files into cohesive arrays in the final executable. We don't
-// actually care about these sections themselves and merge them all into
-// a single section during the final link. (.rdata is the standard section
-// for initialized read-only data.)
-
-#pragma comment(linker, "/merge:.areg=.rdata /merge:.creg=.rdata /merge:.freg=.rdata")
-#pragma comment(linker, "/merge:.greg=.rdata /merge:.yreg=.rdata")
-
-#pragma section(".areg$a",read)
-__declspec(allocate(".areg$a")) void *const ARegHead = 0;
-
-#pragma section(".creg$a",read)
-__declspec(allocate(".creg$a")) void *const CRegHead = 0;
-
-#pragma section(".freg$a",read)
-__declspec(allocate(".freg$a")) void *const FRegHead = 0;
-
-#pragma section(".greg$a",read)
-__declspec(allocate(".greg$a")) void *const GRegHead = 0;
-
-#pragma section(".yreg$a",read)
-__declspec(allocate(".yreg$a")) void *const YRegHead = 0;
 
 // We want visual styles support under XP
 #if defined _M_IX86
@@ -88,24 +131,5 @@ __declspec(allocate(".yreg$a")) void *const YRegHead = 0;
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 #endif
-
-#elif defined(__GNUC__)
-
-#include "basics.h"
-
-// I don't know of an easy way to merge sections together with the GNU linker,
-// so GCC users will see all of these sections appear in the final executable.
-// (There are linker scripts, but that apparently involves extracting the
-// default script from ld and then modifying it.)
-
-void *const ARegHead __attribute__((section(SECTION_AREG))) = 0;
-void *const CRegHead __attribute__((section(SECTION_CREG))) = 0;
-void *const FRegHead __attribute__((section(SECTION_FREG))) = 0;
-void *const GRegHead __attribute__((section(SECTION_GREG))) = 0;
-void *const YRegHead __attribute__((section(SECTION_YREG))) = 0;
-
-#else
-
-#error Please fix autostart.cpp for your compiler
 
 #endif

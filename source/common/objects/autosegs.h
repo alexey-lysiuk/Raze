@@ -63,7 +63,20 @@ class FAutoSeg
 	void Initialize();
 
 public:
-	explicit FAutoSeg(const char *name);
+	explicit FAutoSeg(const char *name)
+	: name(name)
+	, begin(nullptr)
+	, end(nullptr)
+	{
+		Initialize();
+	}
+
+	FAutoSeg(void** begin, void** end)
+	: name(nullptr)
+	, begin(begin)
+	, end(end)
+	{
+	}
 
 	template <typename Func>
 	void ForEach(Func func)
@@ -90,18 +103,28 @@ namespace AutoSegs
 	extern FAutoSeg MapInfoOptions;
 }
 
+#define AUTOSEG_AREG areg
+#define AUTOSEG_CREG creg
+#define AUTOSEG_FREG freg
+#define AUTOSEG_GREG greg
+#define AUTOSEG_YREG yreg
+
+#define AUTOSEG_STR(string) AUTOSEG_STR2(string)
+#define AUTOSEG_STR2(string) #string
+
 #ifdef __MACH__
-#define SECTION_AREG "__DATA,.areg"
-#define SECTION_CREG "__DATA,.creg"
-#define SECTION_FREG "__DATA,.freg"
-#define SECTION_GREG "__DATA,.greg"
-#define SECTION_YREG "__DATA,.yreg"
+#define AUTOSEG_MACH_SECTION(section) "__DATA," AUTOSEG_STR(section)
+#define SECTION_AREG AUTOSEG_MACH_SECTION(AUTOSEG_AREG)
+#define SECTION_CREG AUTOSEG_MACH_SECTION(AUTOSEG_CREG)
+#define SECTION_FREG AUTOSEG_MACH_SECTION(AUTOSEG_FREG)
+#define SECTION_GREG AUTOSEG_MACH_SECTION(AUTOSEG_GREG)
+#define SECTION_YREG AUTOSEG_MACH_SECTION(AUTOSEG_YREG)
 #else
-#define SECTION_AREG ".areg"
-#define SECTION_CREG ".creg"
-#define SECTION_FREG ".freg"
-#define SECTION_GREG ".greg"
-#define SECTION_YREG ".yreg"
+#define SECTION_AREG AUTOSEG_STR(AUTOSEG_AREG)
+#define SECTION_CREG AUTOSEG_STR(AUTOSEG_CREG)
+#define SECTION_FREG AUTOSEG_STR(AUTOSEG_FREG)
+#define SECTION_GREG AUTOSEG_STR(AUTOSEG_GREG)
+#define SECTION_YREG AUTOSEG_STR(AUTOSEG_YREG)
 #endif
 
 #endif

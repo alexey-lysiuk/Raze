@@ -52,25 +52,34 @@
 #endif
 
 
-namespace AutoSegs
-{
-	FAutoSeg ActionFunctons{ SECTION_AREG };
-	FAutoSeg TypeInfos{ SECTION_CREG };
-	FAutoSeg ClassFields{ SECTION_FREG };
-	FAutoSeg Properties{ SECTION_GREG };
-	FAutoSeg MapInfoOptions{ SECTION_YREG };
-}
+#if defined _WIN32 || defined __MACH__
 
+#define AUTOSEG_START
+#define AUTOSEG_STOP
+#define AUTOSEG_VARIABLE(name, autoseg) namespace AutoSegs{ FAutoSeg name{ AUTOSEG_STR(autoseg) }; }
 
-FAutoSeg::FAutoSeg(const char *const name)
-: name(name)
-, begin(nullptr)
-, end(nullptr)
-{
-	assert(name != nullptr);
+#else // Linux and others with ELF executables
 
-	Initialize();
-}
+#define AUTOSEG_START(name) __start_##name
+#define AUTOSEG_STOP(name) __stop_##name
+#define AUTOSEG_VARIABLE(name, autoseg) \
+	void* name##DummyPointer __attribute__((section(AUTOSEG_STR(autoseg)))) __attribute__((used)); \
+	extern void* AUTOSEG_START(autoseg); \
+	extern void* AUTOSEG_STOP(autoseg); \
+	namespace AutoSegs { FAutoSeg name{ &AUTOSEG_START(autoseg), &AUTOSEG_STOP(autoseg) }; }
+
+#endif
+
+AUTOSEG_VARIABLE(ActionFunctons, AUTOSEG_AREG)
+AUTOSEG_VARIABLE(TypeInfos, AUTOSEG_CREG)
+AUTOSEG_VARIABLE(ClassFields, AUTOSEG_FREG)
+AUTOSEG_VARIABLE(Properties, AUTOSEG_GREG)
+AUTOSEG_VARIABLE(MapInfoOptions, AUTOSEG_YREG)
+
+#undef AUTOSEG_VARIABLE
+#undef AUTOSEG_STOP
+#undef AUTOSEG_START
+
 
 void FAutoSeg::Initialize()
 {
@@ -105,7 +114,7 @@ void FAutoSeg::Initialize()
 
 #else // Linux and others with ELF executables
 
-	// TODO
+	assert(false);
 
 #endif
 }

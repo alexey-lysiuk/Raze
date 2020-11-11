@@ -103,10 +103,7 @@ void FAutoSeg::Initialize()
 
 #elif defined __MACH__
 
-	TArray<FString> sectionName = FString(name).Split(',');
-	assert(sectionName.Size() == 2);
-	
-	if (const struct section_64 *const section = getsectbyname(sectionName[0], sectionName[1]))
+	if (const struct section_64 *const section = getsectbyname(AUTOSEG_MACH_SEGMENT, name))
 	{
 		begin = reinterpret_cast<void **>(section->addr);
 		end = reinterpret_cast<void **>(section->addr + section->size);

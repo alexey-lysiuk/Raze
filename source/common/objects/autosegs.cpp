@@ -54,8 +54,6 @@
 
 #if defined _WIN32 || defined __MACH__
 
-#define AUTOSEG_START
-#define AUTOSEG_STOP
 #define AUTOSEG_VARIABLE(name, autoseg) namespace AutoSegs{ FAutoSeg name{ AUTOSEG_STR(autoseg) }; }
 
 #else // Linux and others with ELF executables

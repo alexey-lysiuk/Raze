@@ -308,7 +308,7 @@ int I_PickIWad (WadStuff *wads, int numwads, bool showwin, int defaultiwad, int&
 #ifdef __APPLE__
 	return I_PickIWad_Cocoa (wads, numwads, showwin, defaultiwad);
 #else
-	return LauncherWindow::ExecModal(wads, numwads, defaultiwad, &autoloadflags, &extraArgs);
+	return LauncherWindow::ExecModal(wads, numwads, defaultiwad, &autoloadflags, extraArgs);
 #endif
 }
 
@@ -331,7 +331,7 @@ FString I_GetFromClipboard (bool use_primary_selection)
 FString I_GetCWD()
 {
 	char* curdir = getcwd(NULL,0);
-	if (!curdir) 
+	if (!curdir)
 	{
 		return "";
 	}
